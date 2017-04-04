@@ -43,7 +43,7 @@ public class MulticastListeningThread extends Thread {
 					String apelide = matcher.group(1);
 					Peer peer = new Peer(messageIn.getAddress(), apelide);
 					
-					if(!chatManager.getPeers().contains(peer)) {
+					if(!chatManager.getPeers().contains(peer) && !peer.getApelido().equals(chatManager.getApelido())) {
 						System.out.println(apelide + " entrou!");
 						chatManager.getPeers().add(peer);
 					}
@@ -63,7 +63,12 @@ public class MulticastListeningThread extends Thread {
 				}
 				
 				else if(message.matches(".*\\|\\|\\|.*")) {
-					System.out.println("Multicast recebido: " + message);
+					Pattern pattern = Pattern.compile("([a-z1-9]*)");
+					Matcher matcher = pattern.matcher(message);
+					matcher.find();
+					
+					String apelide = matcher.group(1);
+					System.out.println(apelide + " diz: " + message);
 				}
 				
 				else {
