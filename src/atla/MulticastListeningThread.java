@@ -36,17 +36,19 @@ public class MulticastListeningThread extends Thread {
 				String message = new String(messageIn.getData(), messageIn.getOffset(), messageIn.getLength());
 				
 				if (message.matches(".*\\|\\|\\|join.*")) {
-					System.out.println("Alguém entrou!");
-					Pattern pattern = Pattern.compile(".*[a-z1-9]*.*");
+					Pattern pattern = Pattern.compile("([a-z1-9]*)");
 					Matcher matcher = pattern.matcher(message);
-					//String apelide = matcher.group(1);
-					Peer peer = new Peer(messageIn.getAddress().toString(), "qualquercoisa");
+					matcher.find();
+					String apelide = matcher.group(1);
+					System.out.println(apelide + " entrou!");
+					Peer peer = new Peer(messageIn.getAddress().toString(), apelide);
 					chatManager.getPeers().add(peer);
 				}
 				
 				else if(message.matches(".*\\|\\|\\|leave")) {
 					Pattern pattern = Pattern.compile("[a-z1-9]*");
 					Matcher matcher = pattern.matcher(message);
+					matcher.find();
 					Peer peer = new Peer(messageIn.getAddress().toString(), matcher.group(1));
 					chatManager.getPeers().remove(peer);
 				}
@@ -57,7 +59,7 @@ public class MulticastListeningThread extends Thread {
 				
 				else {
 					System.out.println("Mensagem recebida em formato inapropriado. Erro de protocolo");
-					String replyString = "Mensagem não processada. Erro de protocolo.";
+					String replyString = "Mensagem nï¿½o processada. Erro de protocolo.";
 					byte[] replyBytes = replyString.getBytes();
 					DatagramPacket reply = new DatagramPacket(replyBytes, replyBytes.length, messageIn.getAddress(), messageIn.getPort());
 					this.multicastSocket.send(reply);
