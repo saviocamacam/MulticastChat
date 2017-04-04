@@ -32,12 +32,15 @@ public class Main {
 			option = scanner.nextInt();
 			
 			if(option == 1) {
+				if(chatManager.getMulticastSocket().isClosed())
+					chatManager.startMulticastSocket();
+				
 				chatManager.setStatusChat(true);
-				chatManager.controlMessage("join");
+				chatManager.sendControlMessage("join", 0);
 			}
 			else if(option == 2) {
 				chatManager.setStatusChat(false);
-				chatManager.controlMessage("leave");
+				chatManager.sendControlMessage("leave", 0);
 			}
 			else if(option == 3) {
 				if(chatManager.getStatusMulticast())
@@ -45,7 +48,7 @@ public class Main {
 				else System.out.println("Você não está no chat");
 			}
 			else if(option == 4) {
-				chatManager.requestMessage();
+				chatManager.requestMessage(1);
 				chatManager.sendPrivateMessage();
 			}
 			else if(option == 5) {
@@ -55,8 +58,11 @@ public class Main {
 				else{
 					chatManager.printNameOfPeers();
 					int option = scanner.nextInt();
-					chatManager.requestMessage();
-					chatManager.sendMessageFor(option);
+					chatManager.requestMessage(0);
+					if(option >= 0 && option < chatManager.getPeers().size())
+						chatManager.sendMessageFor(option);
+					else
+						System.out.println("Erro de índice");
 				}
 			}
 			else if(option == 6) {

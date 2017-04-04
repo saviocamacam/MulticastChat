@@ -16,11 +16,11 @@ public class ChatManager {
 	private UDPListeningThread udpThread = null;
 	private MulticastListeningThread multicastThread = null;
 	private LinkedList<Peer> peers = null;
-	private String apelido;
+	private String apelide;
 	private int privatePort;
 	private int multicastPort;
 	private Scanner scanner = null;
-	private String destinationIpString = null;
+	private InetAddress destinationIp = null;
 	private String messageString = null;
 	private byte[] messageBytes = null;
 	private boolean statusChat;
@@ -30,7 +30,7 @@ public class ChatManager {
 	
 	public ChatManager(String apelido, int privatePort, int multicastPort) {
 		setPeers(new LinkedList<>());
-		this.apelido = apelido;
+		this.apelide = apelido;
 		this.privatePort = privatePort;
 		this.multicastPort = multicastPort;
 		this.scanner = new Scanner(System.in);
@@ -48,12 +48,31 @@ public class ChatManager {
 		
 	}
 	
+	public void startMulticastSocket() {
+		try {
+			multicastSocket = new MulticastSocket(multicastPort);
+			multicastThread = new MulticastListeningThread(multicastSocket, this, group);
+			multicastThread.start();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public MulticastSocket getMulticastSocket() {
+		return multicastSocket;
+	}
+
 	public void initialize() {
 		udpThread = new UDPListeningThread(udpSocket, this);
 		udpThread.start();
 		
 		multicastThread = new MulticastListeningThread(multicastSocket, this, group);
 		multicastThread.start();
+	}
+
+	public String getApelido() {
+		return apelide;
 	}
 
 	public LinkedList<Peer> getPeers() {
@@ -67,14 +86,12 @@ public class ChatManager {
 
 	public void sendPrivateMessage() {
 		DatagramSocket socketPrivate = null;
-		InetAddress ipDestino = null;
 		
 		try {
 			socketPrivate = new DatagramSocket();
-			String formatedMessage = /*apelido + "|||" + */messageString;
+			String formatedMessage = apelide + "|||" + messageString;
 			messageBytes = formatedMessage.getBytes();
-			ipDestino = InetAddress.getByName(destinationIpString);
-			request = new DatagramPacket(messageBytes, messageBytes.length, ipDestino, privatePort);
+			request = new DatagramPacket(messageBytes, messageBytes.length, destinationIp, privatePort);
 			socketPrivate.send(request);
 			socketPrivate.close();
 			
@@ -89,11 +106,15 @@ public class ChatManager {
 	}
 	
 	public void createPeersTest() {
-		
-		peers.add(new Peer("localhost", "henrique"));
-		peers.add(new Peer("localhost", "vitorio"));
-		peers.add(new Peer("localhost", "otavio"));
-		peers.add(new Peer("localhost", "daniel"));
+		try {
+			peers.add(new Peer(InetAddress.getByName("localhost"), "henrique"));
+			peers.add(new Peer(InetAddress.getByName("localhost"), "vitorio"));
+			peers.add(new Peer(InetAddress.getByName("localhost"), "otavio"));
+			peers.add(new Peer(InetAddress.getByName("localhost"), "daniel"));
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void printNameOfPeers() {
@@ -105,14 +126,21 @@ public class ChatManager {
 
 	public void sendMessageFor(int option) {
 		Peer privatePeer = peers.get(option);
-		this.destinationIpString = privatePeer.getIp();
+		this.destinationIp = privatePeer.getIp();
 		sendPrivateMessage();
 	}
 
-	public void requestMessage() {
-		System.out.println("IP Destino: ");
-		destinationIpString = scanner.nextLine();
-		//destinationVerify();
+	public void requestMessage(int option) {
+		if(option == 1) {
+			System.out.println("IP Destino: ");
+			String destinationIpString = scanner.nextLine();
+			try {
+				destinationIp = InetAddress.getByName(destinationIpString);
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+			//destinationVerify();
+		}
 		
 		System.out.println("MSG: ");
 		messageString = scanner.nextLine();
@@ -120,8 +148,8 @@ public class ChatManager {
 
 	private void destinationVerify() {
 		for(Peer peer : peers) {
-			if(!peer.getIp().equals(destinationIpString)) {
-				peers.add(new Peer(destinationIpString, ""));
+			if(!peer.getIp().equals(destinationIp)) {
+				peers.add(new Peer(destinationIp, ""));
 			}
 		}
 	}
@@ -137,7 +165,7 @@ public class ChatManager {
 	public void sendGroupMessage() {
 		System.out.println("MSG:");
 		messageString = scanner.nextLine();
-		String formatedMessage = apelido + "|||" + messageString;
+		String formatedMessage = apelide + "|||" + messageString;
 		messageBytes = formatedMessage.getBytes();
 		request = new DatagramPacket(messageBytes, messageBytes.length, group, multicastPort);
 		try {
@@ -147,11 +175,16 @@ public class ChatManager {
 		}
 	}
 
-	public void controlMessage(String string) {
+	public void sendControlMessage(String string, int mode) {
 		
-		String formatedMessage = apelido + "|||" + string;
+		String formatedMessage = apelide + "|||" + string;
 		messageBytes = formatedMessage.getBytes();
-		request = new DatagramPacket(messageBytes, messageBytes.length, group, multicastPort);
+		int port = multicastPort;
+		
+		if(mode == 1) {
+			port = privatePort;
+		}
+		request = new DatagramPacket(messageBytes, messageBytes.length, group, port);
 		try {
 			multicastSocket.send(request);
 		} catch (IOException e) {
